@@ -9,16 +9,26 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 
 /**
  * Created by Allen on 4/2/2016.
+ * Walmart API Homework
+ * Interacts with the Walmart Open API.
+ * Requirements:
+ * Search for products based upon a user-provided search string
+ * Use the first item in the search response as input for a product recommendation search
+ * Retrieve reviews of the first 10 product recommendations
+ * Rank order the recommended products based upon the review sentiments
  */
 public class RoboSalesman {
 
     //http://api.walmartlabs.com/v1/search?query=ipod&format=json&apiKey=9e6e85c6pxvt99anbzfcwmzf
-    private static final String QUERY_START = "http://api.walmartlabs.com/v1/search?query=";
+    private static final String SEARCH_QUERY_START = "http://api.walmartlabs.com/v1/search?query=";
     private static final String JSON_RESPONSE = "&format=json";
     private static final String API_KEY = "&apiKey=9e6e85c6pxvt99anbzfcwmzf";
+    private static final String NUM_ITEMS = "&numItems=";
+    private static final String RECOMMEND_QUERY_START = "http://api.walmartlabs.com/v1/nbp?&itemId=";
 
     private int queryResponseCode = -1;
 
@@ -77,9 +87,65 @@ public class RoboSalesman {
      * @throws IOException
      */
     public String search(String searchString) throws IOException {
-        URL url = new URL(QUERY_START + searchString.replace(" ", "%20") + JSON_RESPONSE + API_KEY);
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        URL url = new URL(SEARCH_QUERY_START + searchString.replace(" ", "%20") + JSON_RESPONSE + API_KEY + NUM_ITEMS + "1");
+        return makeGETRequest(url);
+    }
 
+
+
+    /**
+     * Parse out the first product id and return it.
+     * Uses org.json library.
+     * @param searchResult The JSON response from the search query.
+     * @return The first item's id number.
+     */
+    public ArrayList<Integer> parseSearchResults(String searchResult) {
+        try {
+            JSONObject json = new JSONObject(searchResult);
+            JSONArray items = json.getJSONArray("items");
+            return extractItemIds(items, 1);
+        } catch (org.json.JSONException e) {
+            System.err.println("Error parsing search results: " + searchResult);
+        }
+        return null;
+    }
+
+    /**
+     * Example request: http://api.walmartlabs.com/v1/nbp?apiKey={apiKey}&itemId={itemID}
+     * @param itemId The ID used to look up recommendations
+     * @return JSON response of product recommendations
+     */
+    public String requestRecommendations(int itemId) throws IOException {
+        URL url = new URL(RECOMMEND_QUERY_START + itemId + API_KEY + NUM_ITEMS + 10);
+        return makeGETRequest(url);
+    }
+
+    /**
+     * Uses org.json library.
+     * @param recommendations The JSON response from
+     * @return An arraylist of the first 10 product IDs of the recommended items.
+     *         null if an error occurred.
+     */
+    public ArrayList<Integer> parseRecommendations(String recommendations) {
+        try {
+            JSONArray items = new JSONArray(recommendations);
+            return extractItemIds(items, 10);
+        } catch (org.json.JSONException e) {
+            System.err.println("Error parsing search results: " + recommendations);
+        }
+        return null;
+    }
+
+    // --- Helper methods ---
+
+    /**
+     * Helper method to make HTTP GET requests
+     * @param url URL to call
+     * @return Response
+     * @throws IOException
+     */
+    private String makeGETRequest(URL url) throws IOException {
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
         queryResponseCode = con.getResponseCode();
         System.out.println("\nSending 'GET' request to URL : " + url);
         System.out.println("Response Code : " + queryResponseCode);
@@ -101,28 +167,22 @@ public class RoboSalesman {
     }
 
     /**
-     * Parse out the first product id and return it.
+     * Helper method to parse through JSON responses and extract Product IDs
      * Uses org.json library.
-     * @param searchResult The JSON response from the search query.
-     * @return The first item's id number.
+     * @param items JSONArray of products
+     * @param numberOfIds The total number of product IDs to be returned
+     * @return A list of product IDs. The length of which depends on numberOfIds parameter
      */
-    public int parseSearchResults(String searchResult) {
-        if (searchResult != null) {
-            try {
-                JSONObject json = new JSONObject(searchResult);
-                JSONArray items = json.getJSONArray("items");
-                for (int i = 0; i < items.length(); ++i) {
-                    int itemId = items.getJSONObject(i).getInt("itemId");
-                    String name = items.getJSONObject(i).getString("name");
-                    System.out.println(name + " " + itemId);
-                    return itemId;
-                }
-            } catch (org.json.JSONException e) {
-                System.err.println("Error parsing search results: " + searchResult);
-                return -1;
+    private ArrayList<Integer> extractItemIds(JSONArray items, int numberOfIds) {
+        ArrayList<Integer> itemList = new ArrayList<>(numberOfIds);
+        if (items != null) {
+            for (int i = 0; i < numberOfIds; ++i) {
+                int itemId = items.getJSONObject(i).getInt("itemId");
+                String name = items.getJSONObject(i).getString("name");
+                System.out.println(name + " " + itemId);
+                itemList.add(itemId);
             }
         }
-        return -1;
+        return itemList;
     }
-
 }
