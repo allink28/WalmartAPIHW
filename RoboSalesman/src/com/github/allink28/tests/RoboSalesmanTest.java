@@ -41,6 +41,16 @@ public class RoboSalesmanTest {
     public void requestRecommendations() throws Exception {
         RoboSalesman wally = new RoboSalesman();
         wally.requestRecommendations(22471486);
+        assertEquals("Received HTTP Status code: " + wally.getQueryResponseCode(),
+                2, wally.getQueryResponseCode() / 100);
+    }
+
+    @Test
+    public void requestReview() throws Exception {
+        RoboSalesman wally = new RoboSalesman();
+        wally.requestReview(33093101);
+        assertEquals("Received HTTP Status code: " + wally.getQueryResponseCode(),
+                2, wally.getQueryResponseCode() / 100);
     }
 
     @Test
@@ -89,5 +99,16 @@ public class RoboSalesmanTest {
         for (int i = 0; i < recommendedItems.size(); ++i) {
             assertEquals(expectedResult[i], (int)recommendedItems.get(i));
         }
+    }
+
+    @Test
+    public void getAverageReviewScores() throws Exception {
+        String reviews = "{\"itemId\":33093101,\"name\":\"Apple iPad mini 16GB Wi-Fi\",\"salePrice\":199.0,\"upc\":\"885909846290\",\"categoryPath\":\"Electronics/iPad & Tablets/Tablet PCs\",\"brandName\":\"Apple\",\"productTrackingUrl\":\"http://linksynergy.walmart.com/fs-bin/click?id=|LSNID|&offerid=223073.7200&type=14&catid=8&subid=0&hid=7200&tmpid=1082&RD_PARM1=http%253A%252F%252Fwww.walmart.com%252Fip%252FApple-iPad-mini-16GB-Wi-Fi%252F33093101%253Faffp1%253D8yu3DQZTenePIM7N5ewBh71MhlVRsq6_4P-8dtYpsI8%2526affilsrc%253Dapi\",\"productUrl\":\"http://c.affil.walmart.com/t/api06?l=http%3A%2F%2Fwww.walmart.com%2Fip%2FApple-iPad-mini-16GB-Wi-Fi%2F33093101%3Faffp1%3D8yu3DQZTenePIM7N5ewBh71MhlVRsq6_4P-8dtYpsI8%26affilsrc%3Dapi%26veh%3Daff%26wmlspartner%3Dreadonlyapi\",\"categoryNode\":\"3944_1078524_1078084\",\n" +
+                "\"reviews\":[{\"name\":\"Apple iPad mini 16GB Wi-Fi\",\"overallRating\":{\"label\":\"Overall\",\"rating\":\"5\"},\"productAttributes\":[{\"label\":\"Value\",\"rating\":\"4\"},{\"label\":\"Meets Expectations\",\"rating\":\"5\"}],\"reviewer\":\"Jimbo242\",\"reviewText\":\"Great tablet . Extremely portable. The screen is a good size and the resolution is excellent. I've owned an ipad and ipad2 and this has got to be my favorite. Price is a little high, but with all the great apps from the App Store it's worth it.\",\"submissionTime\":\"2012-11-16T18:27:25\",\"title\":\"16 November 2012\",\"upVotes\":\"234\",\"downVotes\":\"49\"},\n" +
+                "{\"name\":\"Apple iPad mini 16GB Wi-Fi\",\"overallRating\":{\"label\":\"Overall\",\"rating\":\"5\"},\"productAttributes\":[{\"label\":\"Value\",\"rating\":\"5\"},{\"label\":\"Meets Expectations\",\"rating\":\"5\"}],\"reviewer\":\"TexasDove\",\"reviewText\":\"very powerful, lightweight, user friendly; great as a an e-reader and for movies; good for email and web surfing.\",\"submissionTime\":\"2013-01-15T07:00:08\",\"title\":\"very user friendly; great picture\",\"upVotes\":\"183\",\"downVotes\":\"48\"},\n" +
+                "{\"name\":\"Apple iPad mini 16GB Wi-Fi\",\"overallRating\":{\"label\":\"Overall\",\"rating\":\"5\"},\"productAttributes\":[{\"label\":\"Value\",\"rating\":\"5\"},{\"label\":\"Meets Expectations\",\"rating\":\"5\"}],\"reviewer\":\"WalmartWoman954\",\"reviewText\":\"I was debating about the mini for a while and when Walmart put them on sale, I jumped on it. I bought it for my son who's 4. It is so thin and light weight and perfect for him to carry(with a case of course). We have an Android tablet which I hate. The mini is so much lighter than the first one! Omg! No comparison!! Apple products just can't be rivaled in my opinion and the apps are amazing! Love, love, love the Mini !!!\",\"submissionTime\":\"2013-04-20T06:39:15\",\"title\":\"iPad Mini is a Tablet Maximum !!!\",\"upVotes\":\"31\",\"downVotes\":\"5\"}],\n" +
+                "\"reviewStatistics\":{\"averageOverallRating\":\"4.79\",\"overallRatingRange\":\"5\",\"ratingDistributions\":[{\"count\":\"2\",\"ratingValue\":\"1\"},{\"count\":\"3\",\"ratingValue\":\"2\"},{\"count\":\"3\",\"ratingValue\":\"3\"},{\"count\":\"20\",\"ratingValue\":\"4\"},{\"count\":\"181\",\"ratingValue\":\"5\"}],\"totalReviewCount\":\"209\"},\"availableOnline\":false}";
+        RoboSalesman wally = new RoboSalesman();
+        assertEquals(4.79, wally.getAverageReviewScores(reviews), 0.0);
     }
 }

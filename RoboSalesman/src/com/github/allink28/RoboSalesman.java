@@ -1,5 +1,6 @@
 package com.github.allink28;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -26,11 +27,13 @@ public class RoboSalesman {
     //http://api.walmartlabs.com/v1/search?query=ipod&format=json&apiKey=9e6e85c6pxvt99anbzfcwmzf
     private static final String SEARCH_QUERY_START = "http://api.walmartlabs.com/v1/search?query=";
     private static final String JSON_RESPONSE = "&format=json";
-    private static final String API_KEY = "&apiKey=9e6e85c6pxvt99anbzfcwmzf";
+    private static final String API_KEY = "&apiKey=9mhzxs4dp7eemnce7xt2426w";
     private static final String NUM_ITEMS = "&numItems=";
     private static final String RECOMMEND_QUERY_START = "http://api.walmartlabs.com/v1/nbp?&itemId=";
+    private static final String REVIEW_QUERY_START = "http://api.walmartlabs.com/v1/reviews/";
 
     private int queryResponseCode = -1;
+//    private ArrayList
 
     public static void main(String[] args) {
         RoboSalesman wally = new RoboSalesman();
@@ -43,6 +46,10 @@ public class RoboSalesman {
 
     }
 
+    /**
+     *  Runs the program.
+     * @param args
+     */
     private void startWork(String[] args) {
         String userInput = parseInput(args);
         if (userInput == null || userInput.trim().length() == 0) {
@@ -50,15 +57,23 @@ public class RoboSalesman {
             return;
         }
         String searchResults = null;
-        try {
-            //TODO if queryResponseCode 2xx, keep results, else ask to retry
+        boolean searchAgain = false;
+        do {
+            try {
+                //TODO if queryResponseCode 2xx, keep results, else ask to retry
                 //or return null result if bad response code?
-             searchResults = search(userInput);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                searchResults = search(userInput);
+                if (queryResponseCode / 200 == 2) {
+                    searchAgain = false;
+                } else {
+                    //TODO prompt for retry
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } while (searchAgain);
     }
 
     /**
@@ -90,8 +105,6 @@ public class RoboSalesman {
         URL url = new URL(SEARCH_QUERY_START + searchString.replace(" ", "%20") + JSON_RESPONSE + API_KEY + NUM_ITEMS + "1");
         return makeGETRequest(url);
     }
-
-
 
     /**
      * Parse out the first product id and return it.
@@ -136,7 +149,32 @@ public class RoboSalesman {
         return null;
     }
 
-    // --- Helper methods ---
+    /**
+     * Example request: http://api.walmartlabs.com/v1/reviews/33093101?apiKey={apiKey}&lsPublisherId={Your LinkShare Publisher Id}&format=json
+     * @param itemId Product ID to retrieve review for.
+     */
+    public String requestReview(int itemId) throws IOException {
+        URL url = new URL(REVIEW_QUERY_START + itemId + "?" + API_KEY);
+        return makeGETRequest(url);
+    }
+
+    /**
+     * Retrieves the average overall rating from the review statistics
+     * @param reviewsResponse Response from Reviews API
+     * @return Average overall review score
+     */
+    public double getAverageReviewScores(String reviewsResponse) {
+        double score = 0;
+        try {
+            JSONObject json = new JSONObject(reviewsResponse);
+            score = json.getJSONObject("reviewStatistics").getDouble("averageOverallRating");
+        } catch (org.json.JSONException e) {
+            System.err.println("Error parsing reviews: " + reviewsResponse);
+        }
+        return score;
+    }
+
+    //    ---    Helper methods    ---    //
 
     /**
      * Helper method to make HTTP GET requests
@@ -144,6 +182,7 @@ public class RoboSalesman {
      * @return Response
      * @throws IOException
      */
+    @NotNull
     private String makeGETRequest(URL url) throws IOException {
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         queryResponseCode = con.getResponseCode();
