@@ -11,6 +11,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeMap;
 
 /**
  * Created by Allen on 4/2/2016.
@@ -33,11 +35,12 @@ public class RoboSalesman {
     private static final String REVIEW_QUERY_START = "http://api.walmartlabs.com/v1/reviews/";
 
     private int queryResponseCode = -1;
-//    private ArrayList
+    private TreeMap<Double, Object> rankedRecommendations = new TreeMap<Double, Object>();
 
     public static void main(String[] args) {
         RoboSalesman wally = new RoboSalesman();
-        wally.startWork(args);
+        //TODO TESTING ONLY
+        wally.startWork(new String[]{"ipod"});
         //TODO intro text
         //TODO buffered input reader on a loop
     }
@@ -74,6 +77,25 @@ public class RoboSalesman {
                 e.printStackTrace();
             }
         } while (searchAgain);
+        List<Integer> item = parseSearchResults(searchResults);
+        if (item == null) {
+            return;
+        }
+
+        try {
+            String response = requestRecommendations(item.get(0));
+            //if response is "[]" no results found
+            List<Integer> recommendedItems = parseRecommendations(response);
+            for (int id : recommendedItems) {
+                rankedRecommendations.put(getAverageReviewScores(requestReview(id)), id);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (int i = rankedRecommendations.size(); i > 0; --i) {
+            System.out.println(rankedRecommendations.pollLastEntry());
+        }
+
     }
 
     /**
@@ -136,7 +158,7 @@ public class RoboSalesman {
     /**
      * Uses org.json library.
      * @param recommendations The JSON response from
-     * @return An arraylist of the first 10 product IDs of the recommended items.
+     * @return An ArrayList of the first 10 product IDs of the recommended items.
      *         null if an error occurred.
      */
     public ArrayList<Integer> parseRecommendations(String recommendations) {
