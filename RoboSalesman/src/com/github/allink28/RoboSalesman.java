@@ -11,8 +11,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.TreeMap;
 
 /**
  * Created by Allen on 4/2/2016.
@@ -26,7 +26,6 @@ import java.util.TreeMap;
  */
 public class RoboSalesman {
 
-    //http://api.walmartlabs.com/v1/search?query=ipod&format=json&apiKey=9e6e85c6pxvt99anbzfcwmzf
     private static final String SEARCH_QUERY_START = "http://api.walmartlabs.com/v1/search?query=";
     private static final String JSON_RESPONSE = "&format=json";
     private static final String API_KEY = "&apiKey=9mhzxs4dp7eemnce7xt2426w";
@@ -35,23 +34,19 @@ public class RoboSalesman {
     private static final String REVIEW_QUERY_START = "http://api.walmartlabs.com/v1/reviews/";
 
     private int queryResponseCode = -1;
-    private TreeMap<Double, Object> rankedRecommendations = new TreeMap<Double, Object>();
+    private ArrayList<ItemAndScore> rankedRecommendations = new ArrayList<>();
 
     public static void main(String[] args) {
         RoboSalesman wally = new RoboSalesman();
         //TODO TESTING ONLY
-        wally.startWork(new String[]{"ipod"});
+        wally.startWork(new String[]{"jeans"});
         //TODO intro text
         //TODO buffered input reader on a loop
     }
 
-    public RoboSalesman() {
-
-    }
-
     /**
      *  Runs the program.
-     * @param args
+     * @param args Command line arguments
      */
     private void startWork(String[] args) {
         String userInput = parseInput(args);
@@ -77,23 +72,26 @@ public class RoboSalesman {
                 e.printStackTrace();
             }
         } while (searchAgain);
-        List<Integer> item = parseSearchResults(searchResults);
-        if (item == null) {
+        List<Integer> productId = parseSearchResults(searchResults);
+        if (productId == null) {
             return;
         }
 
         try {
-            String response = requestRecommendations(item.get(0));
+            String response = requestRecommendations(productId.get(0));
             //if response is "[]" no results found
-            List<Integer> recommendedItems = parseRecommendations(response);
-            for (int id : recommendedItems) {
-                rankedRecommendations.put(getAverageReviewScores(requestReview(id)), id);
+            JSONArray items = new JSONArray(response);
+            for (int i = 0; i < 10 && i < items.length(); ++i) {
+                JSONObject item = (JSONObject) items.get(i);
+                double score = getAverageReviewScores(requestReview(item.getInt("itemId")));
+                rankedRecommendations.add(new ItemAndScore(item, score));
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        for (int i = rankedRecommendations.size(); i > 0; --i) {
-            System.out.println(rankedRecommendations.pollLastEntry());
+        Collections.sort(rankedRecommendations);
+        for (int i = rankedRecommendations.size() - 1; i >= 0; --i) {
+            System.out.println(rankedRecommendations.get(i));
         }
 
     }
@@ -124,6 +122,7 @@ public class RoboSalesman {
      * @throws IOException
      */
     public String search(String searchString) throws IOException {
+        System.out.println("Searching for " + searchString);
         URL url = new URL(SEARCH_QUERY_START + searchString.replace(" ", "%20") + JSON_RESPONSE + API_KEY + NUM_ITEMS + "1");
         return makeGETRequest(url);
     }
@@ -151,6 +150,7 @@ public class RoboSalesman {
      * @return JSON response of product recommendations
      */
     public String requestRecommendations(int itemId) throws IOException {
+        System.out.println("Looking for recommendations...");
         URL url = new URL(RECOMMEND_QUERY_START + itemId + API_KEY + NUM_ITEMS + 10);
         return makeGETRequest(url);
     }
@@ -186,12 +186,12 @@ public class RoboSalesman {
      * @return Average overall review score
      */
     public double getAverageReviewScores(String reviewsResponse) {
-        double score = 0;
+        double score = -1;
         try {
             JSONObject json = new JSONObject(reviewsResponse);
             score = json.getJSONObject("reviewStatistics").getDouble("averageOverallRating");
         } catch (org.json.JSONException e) {
-            System.err.println("Error parsing reviews: " + reviewsResponse);
+            System.err.println("No reviews found for: " + reviewsResponse);
         }
         return score;
     }
@@ -208,8 +208,8 @@ public class RoboSalesman {
     private String makeGETRequest(URL url) throws IOException {
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         queryResponseCode = con.getResponseCode();
-        System.out.println("\nSending 'GET' request to URL : " + url);
-        System.out.println("Response Code : " + queryResponseCode);
+//        System.out.println("\nSending 'GET' request to URL : " + url);
+//        System.out.println("Response Code : " + queryResponseCode);
 
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String inputLine;
@@ -219,7 +219,7 @@ public class RoboSalesman {
         }
         in.close();
 
-        System.out.println(response.toString());
+//        System.out.println(response.toString());
         return response.toString();
     }
 
